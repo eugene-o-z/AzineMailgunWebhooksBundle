@@ -7,13 +7,20 @@ php:
   - nightly
 
 env:
-  - SYMFONY_VERSION=2.7.*
-  - SYMFONY_VERSION=2.8.*
-  - SYMFONY_VERSION=3.3.*
-  - SYMFONY_VERSION=3.4.*
-  - SYMFONY_VERSION=dev-master
+  - SYMFONY_VERSION=lts:^2
+  - SYMFONY_VERSION=lts:^3
 
 matrix:
+  fast_finish: true
+  include:
+    - env:
+        - SYMFONY_VERSION=lts:^2
+        - dependencies=lowest
+
+    - env:
+        - SYMFONY_VERSION=lts:^3
+        - cs_fixer=cs_dry_run
+
   allow_failures:
     - env: SYMFONY_VERSION=dev-master
     - php: nightly
@@ -31,12 +38,14 @@ before_script:
   - phpenv config-add travis.php.ini
   - travis_wait composer require symfony/symfony:${SYMFONY_VERSION} --prefer-source --no-update -v
   - travis_wait composer install --prefer-source
+  - if [ "$dependencies" = "lowest" ]; then composer update --prefer-lowest --prefer-stable -n; fi;
 
 script:
   - phpunit --version
-  - travis_wait vendor/phpunit/phpunit/phpunit --coverage-text --coverage-clover=coverage.clover /home/travis/build/azine/AzineMailgunWebhooksBundle/Tests/
+  - travis_wait vendor/phpunit/phpunit/phpunit --coverage-text --coverage-clover=coverage.clover /home/travis/build/eugene-o-z/AzineMailgunWebhooksBundle/Tests/
   - wget https://scrutinizer-ci.com/ocular.phar
   - php ocular.phar code-coverage:upload --format=php-clover coverage.clover
+  - if [ "$cs_fixer" = "cs_dry_run" ]; then php vendor/friendsofphp/php-cs-fixer/php-cs-fixer --diff --dry-run -v fix --config=.php_cs.dist ./; fi;
 
 notifications:
   email: travis@azine-it.ch
